@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, useState } from 'react';
-import { LockKeyhole } from 'lucide-react';
+import { Code2, LockKeyhole, Sparkles } from 'lucide-react';
 
 export function LoginForm() {
   const [pin, setPin] = useState('');
@@ -53,6 +53,11 @@ export function LoginForm() {
             {busy ? 'Verificando…' : 'Ingresar'}
           </button>
         </form>
+        <div className="login-brands">
+          <span className="login-brand-chip kt"><Code2 size={15} /> KTsoftware</span>
+          <span className="login-brand-chip etiquetame"><Sparkles size={15} /> Etiquétame</span>
+        </div>
+        <p className="login-footer">Tus ideas, siempre listas para publicar.</p>
       </section>
     </main>
   );

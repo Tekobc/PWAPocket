@@ -4,17 +4,23 @@ import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'r
 import {
   CalendarDays,
   Check,
+  Clapperboard,
   ChevronLeft,
   ChevronRight,
   CircleAlert,
+  CircleCheck,
+  Code2,
   Clipboard,
   Download,
   ExternalLink,
   Headphones,
+  Images,
   LoaderCircle,
   LogOut,
+  RectangleVertical,
   Share2,
   Smartphone,
+  Sparkles,
 } from 'lucide-react';
 import type { Post, Workspace, WorkspaceSlug } from '@/lib/types';
 import { formatFriendlyDate, formatShortDate, isOverdue } from '@/lib/date';
@@ -25,11 +31,21 @@ type Filter = 'all' | 'pending' | 'published';
 type PostResponse = { workspace: Workspace; posts: Post[]; today: string; tomorrow: string };
 
 const DEFAULT_WORKSPACES: Workspace[] = [
-  { id: 'ktsoftware', slug: 'ktsoftware', name: 'KTsoftware', accent_color: '#3b82f6', badge_label: 'KT B2B Tech' },
-  { id: 'etiquetame', slug: 'etiquetame', name: 'Etiquétame', accent_color: '#facc15', badge_label: 'Etiquétame B2C' },
+  { id: 'ktsoftware', slug: 'ktsoftware', name: 'KTsoftware', accent_color: '#38bdf8', badge_label: 'Ideas que funcionan' },
+  { id: 'etiquetame', slug: 'etiquetame', name: 'Etiquétame', accent_color: '#f5c94f', badge_label: 'Hecho con cariño' },
 ];
 
 const pageLabels: Record<Page, string> = { today: 'Hoy y mañana', calendar: 'Calendario', audio: 'Audios' };
+const pageDescriptions: Record<Page, string> = {
+  today: 'Tu contenido listo para salir al mundo.',
+  calendar: 'Todo tu plan de publicaciones, en un solo lugar.',
+  audio: 'Completa el sonido de tus próximos reels.',
+};
+const formatLabels: Record<Post['format'], string> = {
+  carrusel: 'Carrusel',
+  reel: 'Reel',
+  historia: 'Historia',
+};
 
 export function Dashboard() {
   const [page, setPage] = useState<Page>('today');
@@ -93,6 +109,9 @@ export function Dashboard() {
     (post.status === 'pending_audio' || (isOverdue(post.scheduled_date, today) && post.status !== 'published')),
   ).length;
   const selectedWorkspace = workspaces.find((workspace) => workspace.slug === slug);
+  const upcomingCount = posts.filter((post) => post.scheduled_date === today || post.scheduled_date === tomorrow).length;
+  const publishedCount = posts.filter((post) => post.status === 'published').length;
+  const brandAccent = slug === 'etiquetame' ? '#f5c94f' : '#38bdf8';
 
   async function updatePost(post: Post, changes: { status?: 'published' | 'ready'; audio_url?: string }) {
     setBusyPost(post.id);
@@ -168,26 +187,61 @@ export function Dashboard() {
   }
 
   return (
-    <main className="app-shell" style={{ '--brand-accent': selectedWorkspace?.accent_color || '#3b82f6' } as CSSProperties}>
+    <main
+      className={`app-shell brand-${slug}`}
+      data-brand={slug}
+      style={{ '--brand-accent': brandAccent } as CSSProperties}
+    >
       <header className="topbar">
         <div className="topbar-title">
-          <span className="brand-dot" />
-          <div><strong>Pocket Manager</strong><small>{selectedWorkspace?.badge_label || 'Publicaciones'}</small></div>
+          <span className="brand-mark-small" aria-hidden="true">
+            {slug === 'ktsoftware' ? <Code2 size={19} /> : <Sparkles size={19} />}
+          </span>
+          <div><strong>{selectedWorkspace?.name || 'Pocket Manager'}</strong><small>{selectedWorkspace?.badge_label || 'Publicaciones'}</small></div>
         </div>
-        <button className="icon-button" type="button" aria-label="Cerrar sesión" onClick={logout}><LogOut size={19} /></button>
+        <button className="icon-button" type="button" aria-label="Cerrar sesión" title="Cerrar sesión" onClick={logout}><LogOut size={19} /></button>
       </header>
 
       <section className="workspace-switch" aria-label="Seleccionar marca">
         {workspaces.map((workspace) => (
-          <button key={workspace.slug} type="button" className={slug === workspace.slug ? 'workspace-option active' : 'workspace-option'} onClick={() => setSlug(workspace.slug as WorkspaceSlug)}>
-            {workspace.name}
+          <button
+            key={workspace.slug}
+            type="button"
+            aria-pressed={slug === workspace.slug}
+            className={`workspace-option ${slug === workspace.slug ? 'active' : ''} workspace-${workspace.slug}`}
+            onClick={() => setSlug(workspace.slug as WorkspaceSlug)}
+          >
+            <span className="workspace-mark" aria-hidden="true">
+              {workspace.slug === 'ktsoftware' ? <Code2 size={19} /> : <Sparkles size={19} />}
+            </span>
+            <span className="workspace-copy"><strong>{workspace.name}</strong><small>{workspace.badge_label}</small></span>
+            {slug === workspace.slug && <CircleCheck className="workspace-check" size={18} />}
           </button>
         ))}
       </section>
 
       <section className="page-heading">
-        <div><p className="eyebrow">Panel de publicaciones</p><h1>{pageLabels[page]}</h1></div>
+        <div>
+          <p className="eyebrow"><span className="eyebrow-dot" /> {page === 'today' ? 'Tu espacio creativo' : selectedWorkspace?.name}</p>
+          <h1>{pageLabels[page]}</h1>
+          <p className="page-description">{pageDescriptions[page]}</p>
+        </div>
         <div className="heading-date">{alertCount > 0 && <span className="alert-badge"><CircleAlert size={14} /> {alertCount}</span>}</div>
+      </section>
+
+      <section className="overview-stats" aria-label="Resumen de publicaciones">
+        <div className="overview-stat">
+          <span className="stat-icon upcoming"><CalendarDays size={17} /></span>
+          <span><strong>{upcomingCount}</strong><small>Próximas</small></span>
+        </div>
+        <div className="overview-stat">
+          <span className="stat-icon pending"><Headphones size={17} /></span>
+          <span><strong>{pendingAudio.length}</strong><small>Sin audio</small></span>
+        </div>
+        <div className="overview-stat">
+          <span className="stat-icon completed"><Check size={17} /></span>
+          <span><strong>{publishedCount}</strong><small>Publicadas</small></span>
+        </div>
       </section>
 
       {notice && <div className="notice" role="status">{notice}<button onClick={() => setNotice('')} aria-label="Cerrar">×</button></div>}
@@ -201,9 +255,9 @@ export function Dashboard() {
       )}
 
       {page === 'calendar' && (
-        <div className="filter-row" aria-label="Filtrar publicaciones">
+        <div className="filter-row" role="group" aria-label="Filtrar publicaciones">
           {(['all', 'pending', 'published'] as Filter[]).map((item) => (
-            <button key={item} className={filter === item ? 'filter-chip selected' : 'filter-chip'} onClick={() => setFilter(item)}>
+            <button key={item} aria-pressed={filter === item} className={filter === item ? 'filter-chip selected' : 'filter-chip'} onClick={() => setFilter(item)}>
               {item === 'all' ? 'Todas' : item === 'pending' ? 'Pendientes' : 'Publicadas'}
             </button>
           ))}
@@ -214,9 +268,12 @@ export function Dashboard() {
         <div className="loading-state"><LoaderCircle className="spin" size={24} /> Cargando publicaciones…</div>
       ) : visiblePosts.length === 0 ? (
         <div className="empty-state">
-          <Smartphone size={27} />
+          <span className="empty-illustration">
+            {page === 'audio' ? <Headphones size={28} /> : page === 'calendar' ? <CalendarDays size={28} /> : <Sparkles size={28} />}
+          </span>
           <h2>{page === 'audio' ? 'No hay audios pendientes' : page === 'today' ? 'No hay publicaciones para estos días' : 'No hay publicaciones en este filtro'}</h2>
-          <p>{page === 'today' ? 'Cuando haya contenido programado para hoy o mañana, aparecerá aquí.' : 'Prueba con otro filtro o revisa la otra marca.'}</p>
+          <p>{page === 'today' ? `Cuando ${selectedWorkspace?.name || 'tu marca'} tenga contenido para hoy o mañana, aparecerá aquí.` : page === 'audio' ? '¡Buen trabajo! Todos tus reels ya tienen audio.' : 'Prueba con otro filtro para encontrar tus publicaciones.'}</p>
+          {page === 'today' && <button className="empty-link" onClick={() => setPage('calendar')}>Ver calendario <ChevronRight size={16} /></button>}
         </div>
       ) : (
         <section className="post-list" aria-label={pageLabels[page]}>
@@ -263,9 +320,9 @@ export function Dashboard() {
       )}
 
       <nav className="bottom-nav" aria-label="Navegación principal">
-        <button className={page === 'today' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('today')}><Smartphone size={20} /><span>Hoy</span></button>
-        <button className={page === 'calendar' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('calendar')}><CalendarDays size={20} /><span>Calendario</span></button>
-        <button className={page === 'audio' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('audio')}><Headphones size={20} /><span>Audios{pendingAudio.length > 0 && <i>{pendingAudio.length}</i>}</span></button>
+        <button aria-current={page === 'today' ? 'page' : undefined} className={page === 'today' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('today')}><Smartphone size={20} /><span>Hoy</span></button>
+        <button aria-current={page === 'calendar' ? 'page' : undefined} className={page === 'calendar' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('calendar')}><CalendarDays size={20} /><span>Calendario</span></button>
+        <button aria-current={page === 'audio' ? 'page' : undefined} className={page === 'audio' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('audio')}><Headphones size={20} /><span>Audios{pendingAudio.length > 0 && <i>{pendingAudio.length}</i>}</span></button>
       </nav>
     </main>
   );
@@ -293,6 +350,8 @@ function PostCard({
     || (post.format === 'reel' && (!video || !cover))
     || (post.format === 'historia' && !image);
   const expired = isOverdue(post.scheduled_date, today) && post.status !== 'published';
+  const statusLabel = post.status === 'published' ? 'Publicada' : post.status === 'pending_audio' ? 'Falta audio' : 'Lista';
+  const statusClass = post.status === 'published' ? 'published' : post.status === 'pending_audio' ? 'needs-audio' : 'ready';
   const fields = [
     ['Código', post.code_id],
     ['Semana', post.source_week === null ? null : String(post.source_week)],
@@ -317,9 +376,16 @@ function PostCard({
   return (
     <article className="post-card">
       <div className="post-card-top">
-        <div><span className={`format-badge ${post.format}`}>{post.format}</span><span className="post-code">{post.code_id}</span></div>
-        <span className="post-date">{formatFriendlyDate(post.scheduled_date)}{post.scheduled_time ? ` · ${post.scheduled_time.slice(0, 5)}` : ''}</span>
+        <div className="post-card-identity">
+          <span className={`format-badge ${post.format}`}>
+            {post.format === 'carrusel' ? <Images size={14} /> : post.format === 'reel' ? <Clapperboard size={14} /> : <RectangleVertical size={14} />}
+            {formatLabels[post.format]}
+          </span>
+          <span className="post-code">{post.code_id}</span>
+        </div>
+        <span className={`status-pill ${statusClass}`}>{post.status === 'published' ? <Check size={13} /> : post.status === 'pending_audio' ? <Headphones size={13} /> : <CircleCheck size={13} />}{statusLabel}</span>
       </div>
+      <div className="post-schedule"><CalendarDays size={15} /><span>{formatFriendlyDate(post.scheduled_date)}</span>{post.scheduled_time && <><span className="schedule-separator">·</span><span>{post.scheduled_time.slice(0, 5)}</span></>}</div>
 
       {post.format === 'carrusel' && imageAssets.length > 0 && (
         <div className="carousel-viewer">
@@ -331,6 +397,7 @@ function PostCard({
           </div>
         </div>
       )}
+      {post.format === 'carrusel' && imageAssets.length > 0 && <p className="media-hint">Desliza para revisar cada pieza del carrusel</p>}
       {post.format === 'reel' && video && (
         <div className="reel-viewer">
           <video src={`/api/assets/${video.id}`} poster={cover ? `/api/assets/${cover.id}` : undefined} controls playsInline preload="metadata" />
@@ -340,10 +407,10 @@ function PostCard({
       {post.format === 'historia' && image && <div className="story-viewer"><img src={`/api/assets/${image.id}`} alt={`Historia ${post.code_id}`} /></div>}
 
       {missingAssets && <p className="missing-assets" role="status"><CircleAlert size={16} /> Faltan archivos multimedia obligatorios para esta publicación.</p>}
-      {post.format === 'historia' && post.notes && <p className="post-notes">Nota para publicar: {post.notes}</p>}
+      {post.format === 'historia' && post.notes && <p className="post-notes"><Sparkles size={15} /> <span><strong>Nota para publicar</strong>{post.notes}</span></p>}
       {post.copy_text && <p className="copy-preview">{post.copy_text}</p>}
       <details className="spreadsheet-fields">
-        <summary>Campos del Excel · {fields.length}</summary>
+        <summary><span><Clipboard size={16} /> Detalles de la publicación</span><small>{fields.length} campos</small></summary>
         <div className="spreadsheet-fields-list">
           {fields.map(([label, value]) => (
             <div className="spreadsheet-field" key={label}>
@@ -379,7 +446,7 @@ function PostCard({
         </div>
       )}
       {post.status === 'published' ? (
-        <div className="published-state"><Check size={17} /> Publicada</div>
+        <div className="published-state"><Check size={17} /> ¡Listo! Esta publicación ya salió</div>
       ) : (
         <button className={`publish-button${expired ? ' overdue' : ''}`} disabled={busy} onClick={() => {
           if (window.confirm(`¿Confirmas que publicaste ${post.code_id}?`)) onStatus('published');
