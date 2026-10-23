@@ -16,6 +16,7 @@ const MEDIA_BUCKET = process.env.MEDIA_BUCKET || 'media';
 const SOURCES = {
   ktInstagram: path.resolve(process.cwd(), 'KT_Instagram_Plantillas.zip'),
   ktReels: path.resolve(process.cwd(), 'KT_Reels_Mes1_MP4.zip'),
+  ktAudio: path.resolve(process.cwd(), 'audios.zip'),
   etqInstagram: path.resolve(process.cwd(), 'etiquetame_Instagram_Kit.zip'),
   etqReels: path.resolve(process.cwd(), 'etiquetame_Reels_Mes1.zip'),
 };
@@ -50,7 +51,7 @@ interface ParsedPostItem {
   status: 'pending_audio' | 'ready' | 'published';
   notes: string | null;
   assets: {
-    asset_type: 'image' | 'video' | 'cover';
+    asset_type: 'image' | 'video' | 'cover' | 'audio';
     storage_path: string;
     order_index: number;
     buffer: Buffer;
@@ -118,6 +119,12 @@ async function runSeed() {
   }
 
   const supabase = hasSupabase ? createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+  const audioArchive = new AdmZip(SOURCES.ktAudio);
+  const audioPackageEntry = audioArchive.getEntries().find(e => path.basename(e.entryName) === 'KT_Voz_y_Audios.zip');
+  if (!audioPackageEntry) {
+    throw new Error('No se encontró KT_Voz_y_Audios.zip dentro de audios.zip.');
+  }
+  const voiceAudioZip = new AdmZip(audioPackageEntry.getData());
 
   let totalPostsInsertedOrUpdated = 0;
   let totalAssetsUploaded = 0;
@@ -208,8 +215,11 @@ async function runSeed() {
       }
 
       let status: 'pending_audio' | 'ready' | 'published' = 'ready';
+      const voiceAudioEntry = brand.slug === 'ktsoftware' && format === 'reel'
+        ? voiceAudioZip.getEntries().find(e => path.basename(e.entryName) === `${code_id}_voz.mp3`)
+        : undefined;
       if (format === 'reel') {
-        status = audio_url ? 'ready' : 'pending_audio';
+        status = audio_url || voiceAudioEntry ? 'ready' : 'pending_audio';
       }
 
       let notesParts: string[] = [];
@@ -292,6 +302,16 @@ async function runSeed() {
             order_index: 0,
             buffer: coverEntry.getData(),
             contentType: 'image/png',
+          });
+        }
+
+        if (voiceAudioEntry) {
+          assets.push({
+            asset_type: 'audio',
+            storage_path: `${brand.slug}/audios/${code_id}_voz.mp3`,
+            order_index: 0,
+            buffer: voiceAudioEntry.getData(),
+            contentType: 'audio/mpeg',
           });
         }
       } else if (format === 'historia') {

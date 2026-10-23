@@ -12,7 +12,7 @@ export interface Workspace {
   created_at?: string;
 }
 
-export type AssetType = 'image' | 'video' | 'cover';
+export type AssetType = 'image' | 'video' | 'cover' | 'audio';
 
 export interface PostAsset {
   id: string;

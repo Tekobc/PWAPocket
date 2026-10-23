@@ -56,7 +56,20 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   }
   const resolvedAudioUrl = update.audio_url ?? current.audio_url;
   if (body.status === 'ready' && current.format === 'reel' && !isValidAudioUrl(resolvedAudioUrl || '')) {
-    return NextResponse.json({ error: 'Agrega un enlace HTTPS de audio antes de marcar este reel como listo.' }, { status: 400 });
+    const { data: audioAsset, error: audioAssetError } = await supabase
+      .from('post_assets')
+      .select('id')
+      .eq('post_id', params.id)
+      .eq('asset_type', 'audio')
+      .limit(1)
+      .maybeSingle();
+    if (audioAssetError) {
+      console.error('No se pudo comprobar el audio de la publicación:', audioAssetError.message);
+      return NextResponse.json({ error: 'No se pudo validar el audio de la publicación.' }, { status: 500 });
+    }
+    if (!audioAsset) {
+      return NextResponse.json({ error: 'Agrega un enlace HTTPS o carga un archivo de audio antes de marcar este reel como listo.' }, { status: 400 });
+    }
   }
 
   const { data, error } = await supabase

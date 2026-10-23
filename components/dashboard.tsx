@@ -147,7 +147,7 @@ export function Dashboard() {
   }
 
   async function shareAssets(post: Post) {
-    const assets = orderedAssets(post);
+    const assets = orderedAssets(post).filter((asset) => asset.asset_type !== 'audio');
     if (!assets.length) {
       setNotice('Esta publicación no tiene archivos multimedia cargados.');
       return;
@@ -345,6 +345,8 @@ function PostCard({
   const displayedCarouselPage = Math.min(carouselPage, Math.max(0, imageAssets.length - 1));
   const video = assets.find((asset) => asset.asset_type === 'video');
   const cover = assets.find((asset) => asset.asset_type === 'cover');
+  const audio = assets.find((asset) => asset.asset_type === 'audio');
+  const shareableAssets = assets.filter((asset) => asset.asset_type !== 'audio');
   const image = post.format === 'historia' ? assets.find((asset) => asset.asset_type === 'image') : undefined;
   const missingAssets = (post.format === 'carrusel' && imageAssets.length === 0)
     || (post.format === 'reel' && (!video || !cover))
@@ -423,19 +425,26 @@ function PostCard({
 
       <div className="post-actions">
         <button className="primary-button" onClick={onCopy} disabled={!post.copy_text}><Clipboard size={17} /> Copiar copy</button>
-        <button className="secondary-button" onClick={onShare} disabled={!assets.length}><Share2 size={17} /> Compartir</button>
+        <button className="secondary-button" onClick={onShare} disabled={!shareableAssets.length}><Share2 size={17} /> Compartir</button>
       </div>
       {assets.length > 0 && (
         <details className="download-list">
           <summary><Download size={16} /> Descargar o abrir archivo</summary>
           {assets.map((asset, index) => (
             <a key={asset.id} href={`/api/assets/${asset.id}?download=1`}>
-              {asset.asset_type === 'cover' ? 'Portada' : asset.asset_type === 'video' ? 'Video' : post.format === 'carrusel' ? `Slide ${index + 1}` : 'Imagen'}
+              {asset.asset_type === 'audio' ? 'Locución' : asset.asset_type === 'cover' ? 'Portada' : asset.asset_type === 'video' ? 'Video' : post.format === 'carrusel' ? `Slide ${index + 1}` : 'Imagen'}
             </a>
           ))}
         </details>
       )}
 
+      {audio && (
+        <div className="audio-player">
+          <span>Locución lista</span>
+          <audio controls preload="metadata" src={`/api/assets/${audio.id}`}>Tu navegador no puede reproducir este audio.</audio>
+          <a href={`/api/assets/${audio.id}?download=1`}>Descargar locución</a>
+        </div>
+      )}
       {post.audio_url && isValidAudioUrl(post.audio_url) && (
         <a className="audio-link" href={post.audio_url} target="_blank" rel="noopener noreferrer"><Headphones size={17} /> Abrir audio <ExternalLink size={14} /></a>
       )}

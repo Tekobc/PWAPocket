@@ -86,6 +86,10 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .download-list summary { min-height: 44px; color: #a1a1aa; }
 .download-list a { display: flex; align-items: center; min-height: 40px; padding-left: 25px; color: #93c5fd; font-size: 13px; text-decoration: none; }
 .audio-link { margin-top: 5px; }
+.audio-player { display: grid; gap: 8px; margin: 12px 0; padding: 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-raised); }
+.audio-player span { color: var(--text); font-size: 14px; font-weight: 700; }
+.audio-player audio { width: 100%; }
+.audio-player a { width: fit-content; min-height: 32px; color: var(--brand-secondary); font-size: 13px; font-weight: 700; }
 .audio-entry { display: grid; gap: 8px; margin: 12px 0; padding: 12px; border: 1px solid #3f3f46; border-radius: 14px; background: #18181b; }
 .audio-entry > div { display: flex; gap: 8px; }
 .audio-entry input { min-width: 0; }

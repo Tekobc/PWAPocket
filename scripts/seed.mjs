@@ -21,6 +21,7 @@ const MEDIA_BUCKET = process.env.MEDIA_BUCKET || 'media';
 const SOURCES = {
   ktInstagram: path.resolve(rootDir, 'KT_Instagram_Plantillas.zip'),
   ktReels: path.resolve(rootDir, 'KT_Reels_Mes1_MP4.zip'),
+  ktAudio: path.resolve(rootDir, 'audios.zip'),
   etqInstagram: path.resolve(rootDir, 'etiquetame_Instagram_Kit.zip'),
   etqReels: path.resolve(rootDir, 'etiquetame_Reels_Mes1.zip'),
 };
@@ -127,6 +128,12 @@ async function runSeed() {
   }
 
   const supabase = hasSupabase ? createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+  const audioArchive = new AdmZip(SOURCES.ktAudio);
+  const audioPackageEntry = audioArchive.getEntries().find(e => path.basename(e.entryName) === 'KT_Voz_y_Audios.zip');
+  if (!audioPackageEntry) {
+    throw new Error('No se encontró KT_Voz_y_Audios.zip dentro de audios.zip.');
+  }
+  const voiceAudioZip = new AdmZip(audioPackageEntry.getData());
 
   let totalPostsInsertedOrUpdated = 0;
   let totalAssetsUploaded = 0;
@@ -234,8 +241,11 @@ async function runSeed() {
 
       // Status rule
       let status = 'ready';
+      const voiceAudioEntry = brand.slug === 'ktsoftware' && format === 'reel'
+        ? voiceAudioZip.getEntries().find(e => path.basename(e.entryName) === `${code_id}_voz.mp3`)
+        : undefined;
       if (format === 'reel') {
-        status = audio_url ? 'ready' : 'pending_audio';
+        status = audio_url || voiceAudioEntry ? 'ready' : 'pending_audio';
       }
 
       // Notes & Stickers
@@ -326,6 +336,16 @@ async function runSeed() {
             contentType: 'image/png',
           });
         }
+
+        if (voiceAudioEntry) {
+          assets.push({
+            asset_type: 'audio',
+            storage_path: `${brand.slug}/audios/${code_id}_voz.mp3`,
+            order_index: 0,
+            buffer: voiceAudioEntry.getData(),
+            contentType: 'audio/mpeg',
+          });
+        }
       } else if (format === 'historia') {
         // Imagen 9:16 en salida/HISTORIAS-MES1/<code_id>.png
         const storyEntry = igZip.getEntries().find(e => {
@@ -373,7 +393,7 @@ async function runSeed() {
     console.log(`[OK] Total de piezas parseadas para ${brand.name}: ${parsedPosts.length} (esperadas: 22)`);
 
     // Inserción en Supabase si está disponible
-    if (supabase) {
+    if (supabase && !dryRun) {
       // 1. Workspace
       const { data: wsData, error: wsError } = await supabase
         .from('workspaces')
@@ -412,9 +432,10 @@ async function runSeed() {
         }
 
         const audioUrl = existingPost?.audio_url || item.audio_url;
+        const hasAudioAsset = item.assets.some(asset => asset.asset_type === 'audio');
         const status = existingPost?.status === 'published'
           ? 'published'
-          : (item.format === 'reel' && !audioUrl ? 'pending_audio' : 'ready');
+          : (item.format === 'reel' && !audioUrl && !hasAudioAsset ? 'pending_audio' : 'ready');
         const { data: postData, error: postError } = await supabase
           .from('posts')
           .upsert(

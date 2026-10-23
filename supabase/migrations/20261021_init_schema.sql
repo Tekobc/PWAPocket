@@ -75,7 +75,7 @@ ALTER TABLE posts ADD COLUMN IF NOT EXISTS source_status TEXT;
 CREATE TABLE IF NOT EXISTS post_assets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     post_id UUID NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
-    asset_type VARCHAR(20) NOT NULL CHECK (asset_type IN ('image', 'video', 'cover')),
+    asset_type VARCHAR(20) NOT NULL CHECK (asset_type IN ('image', 'video', 'cover', 'audio')),
     storage_path TEXT NOT NULL,            -- Ruta en el bucket Supabase Storage
     public_url TEXT,                       -- Compatibilidad; dejar NULL para el bucket privado
     order_index INTEGER NOT NULL DEFAULT 0,
@@ -124,7 +124,7 @@ CREATE TRIGGER trg_posts_published_at
 
 -- Configuración de Storage Bucket 'media' y Políticas RLS
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-VALUES ('media', 'media', false, 104857600, ARRAY['image/png', 'image/jpeg', 'video/mp4'])
+VALUES ('media', 'media', false, 104857600, ARRAY['image/png', 'image/jpeg', 'video/mp4', 'audio/mpeg'])
 ON CONFLICT (id) DO UPDATE
 SET public = false,
     file_size_limit = EXCLUDED.file_size_limit,

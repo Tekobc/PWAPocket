@@ -24,6 +24,8 @@ Cada publicación conserva los campos de la planilla de su marca por separado (g
 
 No guardamos respuestas API, publicaciones ni medios en caché offline. Sin conexión se muestra una pantalla informativa; la PWA no permite operar con datos desactualizados.
 
+El seed asocia los audios de locución de KT incluidos en `audios.zip` a cada reel por su código (por ejemplo, `S1-01`) y permite reproducirlos desde su card.
+
 ## Acceso y medios
 
 - Todas las rutas de datos verifican la cookie firmada `HttpOnly`; las mutaciones de post aceptan solo estados válidos y enlaces HTTPS.
